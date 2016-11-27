@@ -5,7 +5,7 @@ import sys
 
 
 max = 10
-address = "localhost"
+address = "192.168.0.200"
 port = int(sys.argv[1])
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 numberofThreads = 0
