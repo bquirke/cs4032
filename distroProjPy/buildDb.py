@@ -13,13 +13,27 @@ connect_string = "mongodb://" + db_server + ":" + db_port
 openConnection = MongoClient(connect_string)
 db = openConnection.distro
 
-collection = db.test_collection
+clients = db.clients
+db.clients.drop()
 
-post = {"author": "Hello",
-			"date": datetime.datetime.utcnow()}
+client_list = [{"client_id": "1",
+                "session_key": "000",
+                "session_key_expirary_date": (
+                    datetime.datetime.utcnow() + datetime.timedelta(seconds=60 * 60 * 4)).strftime('%Y-%m-%d %H:%M:%S'),
+                "password": "AAAbbb1234567890",
+                "public_key": "01234567890123456789abcd"},
+               {"client_id": "21",
+                "session_key": "000",
+                "session_key_expirary_date": (
+                    datetime.datetime.utcnow() + datetime.timedelta(seconds=60 * 60 * 4)).strftime('%Y-%m-%d %H:%M:%S'),
+                "password": "aaaBBB1234567890",
+                "public_key": "abcd01234567890123456789"},
+               {"client_id": "5",
+                "session_key": "000",
+                "session_key_expirary_date": (
+                    datetime.datetime.utcnow() + datetime.timedelta(seconds=60 * 60 * 4)).strftime('%Y-%m-%d %H:%M:%S'),
+                "password": "password12345678",
+                "public_key": "isthissixteenbitslong123"}
+               ]
 
-posts = db.posts
-db.posts.drop()
-
-post_id = posts.insert_one(post).inserted_id
-print (post_id)
+clients.insert(client_list)

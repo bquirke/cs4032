@@ -1,6 +1,6 @@
 import base64
 import datetime
-import json 
+import json
 import hashlib
 import os
 import threading
@@ -17,11 +17,11 @@ from Crypto.Cipher import AES
 application = Flask(__name__)
 mongo = PyMongo(application)
 
+
 @application.route('/test', methods=['POST'])
 def test():
-	print ("Test Worked!!")
-	return jsonify({'success':True})
-
+    print("Test Worked!!")
+    return jsonify({'success': True})
 
 
 if __name__ == '__main__':
