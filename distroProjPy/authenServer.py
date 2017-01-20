@@ -18,27 +18,30 @@ from Crypto.Cipher import AES
 from serverSetup import Server
 from serverSetup import AuthenticationLayer
 
+SHARED_SERVER_KEY = 'fedcba0123456789abcdef9876543210'
+
 application = Flask(__name__)
 mongo = PyMongo(application)
 
-with application.app_context():
+'''with application.app_context():
     db = mongo.db
     db.clients.drop()
-
-SHARED_SERVER_KEY = 'fedcba0123456789abcdef9876543210'
+    db.servers.drop()
+    db.publicKeys.drop()'''
 
 # Setting up the database conn
-'''
-REDUNDANT
+
+#REDUNDANT
 db_server = "localhost"
 db_port = "27017"
 connect_string = "mongodb://" + db_server + ":" + db_port
 
 openConnection = MongoClient(connect_string)
-db = openConnection.distro
+db = openConnection.authenServer
 clients = db.clients
 db.clients.drop()
-'''
+db.servers.drop()
+db.publicKeys.drop()
 
 
 
