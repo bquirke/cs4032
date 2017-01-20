@@ -71,7 +71,7 @@ class AuthenticationLayer():
         decoded_password = AuthenticationLayer.decode(publicKey,byte_enc_pw)
         str_decoded_password = str(decoded_password, 'utf-8')
 
-        if (str_decoded_password == client_data['password']):
+        if (str_decoded_password == client_data['password']):   # If authorised client generate key and expirary date + update client
             session_key = ''.join(
                 random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
 

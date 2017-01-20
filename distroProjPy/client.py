@@ -28,11 +28,9 @@ print(len("0123456789abcdef0123456789abcdef"))
 headers = {'Content-type': 'application/json'}
 
 payload = {'client_id':'4','client_username': 'bryan', 'password': unencrypted_password,
-           "server_host": "127.0.0.1","server_port": "0000"}
+           "server_host": "127.0.0.1","server_port": "8093"}
 
-#TEST
-#r = requests.post("http://127.0.0.1:5000/server/directory/file/download", data=json.dumps(payload), headers=headers)
-#print(r)
+
 
 clientAdd = requests.post("http://127.0.0.1:5000/createClient", data=json.dumps(payload), headers=headers)
 print (clientAdd)
@@ -56,6 +54,8 @@ server_host = decoded_data["server_host"]
 server_port = decoded_data["server_port"]
 
 # SESSION KEY IS USED FROM NOW ON TO ENCRYPT MESSAGES BETWEEN SERVER AND CLIENT
-
+#TEST
+r = requests.post("http://"+server_host+":"+server_port+"/server/directory/file/download", data=json.dumps(payload), headers=headers)
+print(r)
 
 

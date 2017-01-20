@@ -85,8 +85,8 @@ def authenticateClient():
     if user:
         rsp_token = json.dumps({'session_key': user['session_key'],
                             'session_key_expires': user['session_key_expires'],
-                            'server_host': "127.0.0.1",
-                            'server_port': "0000",
+                            'server_host': user['server_host'],
+                            'server_port': user['server_port'],
                             'ticket': str(AuthenticationLayer.encode(SHARED_SERVER_KEY, user['session_key']), 'utf-8')})
 
         return jsonify({'success': True, 'token': str(AuthenticationLayer.encode(user['public_key'], rsp_token), 'utf-8')})
