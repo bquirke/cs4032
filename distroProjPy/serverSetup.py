@@ -18,19 +18,26 @@ from Crypto.Cipher import AES
 application = Flask(__name__)
 mongo = PyMongo(application)
 
-
+###########################################
 class Server:
     def __init__(self):
         pass
 
-    def get_servers(self):
-        return mongo.db.server.find()
+    def get_servers():
+        return mongo.db.servers.find()
 
     def create(host, port):
         db = mongo.db
         insert = db.servers.insert_one({"host": host, "port": port})
+        return insert
+
+    def find_server(host,port):
+        db = mongo.db
+        return db.servers.find({"host": host, "port": port})
 
 
+
+#############################################
 class AuthenticationLayer():
     def __init__(self):
         pass
@@ -78,6 +85,7 @@ class AuthenticationLayer():
             session_key_expires = (datetime.datetime.utcnow() + datetime.timedelta(seconds=60 * 60 * 4)).strftime(
                 '%Y-%m-%d %H:%M:%S')
 
+            print(session_key)
             client_data['session_key'] = session_key
             client_data['session_key_expires'] = session_key_expires
             if (AuthenticationLayer.update_client(client_id, client_data)):
@@ -87,3 +95,49 @@ class AuthenticationLayer():
 
         else:
             return False
+
+
+####################################################
+class File:
+    def __init__(self):
+        pass
+
+
+    def create(name, directory_name, directory_reference, server_reference, file_text):
+        db = mongo.db
+        hex = hashlib.md5()
+        print(type(directory_name))
+        print(type(directory_reference))
+        hex.update(bytes( directory_reference + "/", "utf-8") + directory_name)
+        db.files.insert({"name": name, "directory": directory_reference
+                         , "server": server_reference
+                         , "reference": hex.hexdigest()
+                         , "updated_at": datetime.datetime.utcnow()
+                         , "file_text": file_text
+                         })
+        file = db.files.find_one({"reference": hex.hexdigest()})
+        return file
+
+#####################################################
+class Directory:
+    def __init__(self):
+        pass
+
+
+    def create(name, server):
+        db = mongo.db
+        hex = hashlib.md5()
+        hex.update(name)
+        db.directories.insert({"name": name
+                               , "reference": hex.hexdigest()
+                               , "server": server})
+        directory = db.directories.find_one({"name": name, "reference": hex.hexdigest()})
+        return directory
+
+    def isDirectories(name, reference, server_ref):
+        db = mongo.db
+        try:
+            if db.directories.find_one({"name": name, "reference":reference, "server": server_ref}):
+                return True
+        except:
+            return False    # None type returned

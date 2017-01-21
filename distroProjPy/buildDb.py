@@ -32,9 +32,12 @@ db = openConnection.authenServer
 
 clients = db.clients
 
+
 db.clients.drop()
 db.servers.drop()
 db.publicKeys.drop()
+db.directories.drop()
+db.files.drop()
 #db = mongo.db
 
 
@@ -91,4 +94,10 @@ keys_list = [{"public_key": '0123456789abcdef0123456789abcdef', "client_id": '4'
              {"public_key": 'fedcba0123456789abcdef9876543210', "client_id": '2'}]
 
 db.publicKeys.insert(keys_list)
+################################################
 
+dir_list = [{"name": 'test'}]
+db.directories.insert(dir_list)
+
+file_list = [{"name": 'test_file'}]
+db.files.insert(file_list)

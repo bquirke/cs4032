@@ -17,13 +17,35 @@ from pymongo import MongoClient
 from Crypto.Cipher import AES
 from Crypto import Random
 
-publicKey = '0123456789abcdef0123456789abcdef'
+
+# PASSWORD ENCRYPTION
+keyDerivedFromPassword = '0123456789abcdef0123456789abcdef'
 unencrypted_password = 'youWillNeverGues'
-cipher = AES.new(publicKey, AES.MODE_ECB)  # never use ECB in strong systems obviously
-encrypted_password = str(base64.b64encode(cipher.encrypt(unencrypted_password)), 'utf-8')
+
+
+def pad(s):
+    return s + " " * (AES.block_size - len(s) % AES.block_size)
+
+
+def encode(key, data):
+    cipher = AES.new(key, AES.MODE_ECB)
+    x = len(data)
+    padded_data = pad(data)
+    y = len(padded_data)
+    encrypted = base64.b64encode(cipher.encrypt(padded_data))
+    return encrypted
+
+
+def decode(key, encrypted):
+    cipher = AES.new(key, AES.MODE_ECB)
+    decoded_data = cipher.decrypt(base64.b64decode(encrypted))
+    return decoded_data.strip()  ### NEED TO TEST
+
+
+
+encrypted_password = str(encode(keyDerivedFromPassword, unencrypted_password), 'utf-8')
 print(encrypted_password)
 
-print(len("0123456789abcdef0123456789abcdef"))
 
 headers = {'Content-type': 'application/json'}
 
@@ -32,30 +54,47 @@ payload = {'client_id':'4','client_username': 'bryan', 'password': unencrypted_p
 
 
 
+# ADDING CLIENT
 clientAdd = requests.post("http://127.0.0.1:5000/createClient", data=json.dumps(payload), headers=headers)
 print (clientAdd)
 time.sleep(3)
 
 payload = {'client_id':'4','client_username': 'bryan', 'password': encrypted_password}
 
+#AUTHORISING ADDED CLIENT
 clientAuth = requests.post("http://127.0.0.1:5000/authClient", data=json.dumps(payload), headers=headers)
+print(clientAuth)
 
+
+#DECODING RESPONSE
 response_text = clientAuth.text
 encoded_token = json.loads(response_text)["token"]
-decoded = cipher.decrypt(base64.b64decode(encoded_token))
+decoded = decode(keyDerivedFromPassword,encoded_token)
 decoded_data = json.loads(str(decoded, 'utf-8').strip())
-print(decoded_data)
 print("DECODED CLIENT AUTHENTICATION")
 
 session_key = decoded_data["session_key"]
-print(session_key)
+print("Session key: " + session_key)
 ticket = decoded_data["ticket"]
 server_host = decoded_data["server_host"]
 server_port = decoded_data["server_port"]
 
-# SESSION KEY IS USED FROM NOW ON TO ENCRYPT MESSAGES BETWEEN SERVER AND CLIENT
-#TEST
-r = requests.post("http://"+server_host+":"+server_port+"/server/directory/file/download", data=json.dumps(payload), headers=headers)
-print(r)
+print("Server host: " + server_host)
+print("Server port: " + server_port)
 
+###### SESSION KEY IS USED FROM NOW ON TO ENCRYPT MESSAGES BETWEEN SERVER AND CLIENT
 
+f = open('test_file_name.txt')  # open a file
+text = f.read()    # read the entire contents, should be UTF-8 text
+
+#details = json.dumps({"directory_name": "/test", "file_name": 'test_file_name.txt', "file_text": text})
+#encoded = pad(str(encode(session_key,details)))
+#print(len(encoded))
+enc_directory = str(encode(session_key, "/test"), "utf-8")
+enc_file_name = str(encode(session_key, 'test_file_name.txt'), "utf-8")
+enc_text = str(encode(session_key, text), "utf-8")
+
+payload = {"directory_name" : enc_directory,"file_name": enc_file_name, "file_text": enc_text, "ticket": ticket}
+url = "http://" + server_host+":" + server_port
+fileUpload = requests.post(url + "/server/directory/file/upload", data=json.dumps(payload), headers=headers)
+print(fileUpload)

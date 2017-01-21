@@ -39,9 +39,11 @@ connect_string = "mongodb://" + db_server + ":" + db_port
 openConnection = MongoClient(connect_string)
 db = openConnection.authenServer
 clients = db.clients
-db.clients.drop()
+'''db.clients.drop()
 db.servers.drop()
 db.publicKeys.drop()
+db.directories.drop()
+db.files.drop()'''
 
 
 
