@@ -64,14 +64,14 @@ def file_upload():
 
     if not db.directories.find_one({"name": directory_name, "reference": hex.hexdigest(), "server": server["reference"]}):
         directory = Directory.create(directory_name, server["reference"])   # Create a new directory
-        print("DIRECTORY CREATED")
+        print("DIRECTORY CREATED -> " + str(directory_name, "utf-8"))
 
     else:
         directory = db.directories.find_one({"name": directory_name, "reference": hex.hexdigest(), "server": server["reference"]})
 
     if not db.files.find_one({"name": file_name, "server": server["reference"], "directory": directory["reference"]}):
         file = File.create(file_name, directory_name, directory["reference"], server["reference"], file_text )
-        print("FILE CREATED")
+        print("FILE CREATED -> " + str(file_name, "utf-8") )
 
     else:
         file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": directory["reference"]})
@@ -108,13 +108,42 @@ def file_download():
     if not file:
         return jsonify({'success': False})
 
-    print("SENDING FILE " + str(file_name, "utf-8"))
+    print("SENDING FILE -> " + str(file_name, "utf-8"))
     return flask.send_file(file["reference"])
 
 
-''''@application.route('/server/directory/file/delete', methhods=['POST'])
+@application.route('/server/directory/file/delete', methods=['POST'])
 def file_delete():
-    print()'''
+    data = request.get_json(force=True)
+    ticket = data['ticket']
+    decoded_ticket = AuthenticationLayer.decode(SHARED_SERVER_KEY, bytes(ticket, 'utf-8'))
+
+    file_name = AuthenticationLayer.decode(decoded_ticket, bytes(data['file_name'], "utf-8"))
+    directory_name = AuthenticationLayer.decode(decoded_ticket, bytes(data['directory_name'], "utf-8"))
+
+    hex = hashlib.md5()
+    hex.update(directory_name)
+    server = currentServer()
+
+    dir = db.directories.find_one({"name": directory_name, "reference": hex.hexdigest(), "server": server["reference"]})
+
+    if not dir:
+        return jsonify({'success': False})
+
+    file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]})
+
+    if not file:
+        return jsonify({'success': False})
+
+    os.remove(file["reference"])
+
+    delete_file = db.files.delete_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]})
+    if not delete_file.deleted_count >= 0:
+        return jsonify({'success': False})
+
+    print("FILE DELETED -> " + str(file_name, "utf-8"))
+
+    return jsonify({'success': True})
 
 
 

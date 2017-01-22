@@ -98,6 +98,19 @@ db.publicKeys.insert(keys_list)
 
 dir_list = [{"name": 'test'}]
 db.directories.insert(dir_list)
+''' Directory
+    {"name": name
+    , "reference": made from directory name
+    , "server": server}'''
 
 file_list = [{"name": 'test_file'}]
 db.files.insert(file_list)
+
+''' File db setup
+    {"name": name
+    , "directory": directory_reference
+    , "server": server_reference
+    , "reference": reference made of directory name and directory ref
+    , "updated_at": datetime.datetime.utcnow()
+    , "file_text": file_text
+     }'''
