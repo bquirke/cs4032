@@ -48,7 +48,7 @@ client_list = [{"client_id": "1",
                 "password": "AAAbbb1234567890",
                 "public_key": "01234567890123456789abcd",
                 "server_host": "127.0.0.1",
-                "server_port": "8093"},
+                "server_port": "0000"},
 
                {"client_id": "21",
                 "session_key": "000",
@@ -57,7 +57,7 @@ client_list = [{"client_id": "1",
                 "password": "aaaBBB1234567890",
                 "public_key": "abcd01234567890123456789",
                 "server_host": "127.0.0.1",
-                "server_port": "8093"},
+                "server_port": "0000"},
 
                {"client_id": "5",
                 "session_key": "000",
@@ -66,7 +66,7 @@ client_list = [{"client_id": "1",
                 "password": "password12345678",
                 "public_key": "isthissixteenbitslong123",
                 "server_host": "127.0.0.1",
-                "server_port": "8094"}
+                "server_port": "0000"}
                ]
 
 db.clients.insert(client_list)

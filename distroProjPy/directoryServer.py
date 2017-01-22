@@ -44,12 +44,35 @@ def currentServer():
         if ((server['host'] == CURRENT_HOST) & (server['port'] == CURRENT_PORT)):
             return server
 
+def sendToMaster(data, header, url):
+    r = requests.post("http://127.0.0.1:8092" + url, data=json.dumps(data), headers=header)
+    print("MASTER SERVER REPLIED " + r.text)
+
+def replicateUpload(data, headers):
+    with application.app_context():
+        print("in replicate upload")
+        servers = db.servers.find()
+        for server in servers:
+            if server['is_master'] == False:
+                host = server["host"]
+                port = server["port"]
+                if (host == CURRENT_HOST and port == CURRENT_PORT):
+                    continue
+                print("POSTING TO " + server['port'])
+                r = requests.post("http://" + host + ":" + port + "/server/directory/file/upload", data=json.dumps(data), headers=headers)
+                print(r.text)
+
+
 
 
 
 @application.route('/server/directory/file/upload', methods=['POST'])  # HTTP requests posted to this method
 def file_upload():
+    print("IN UPLOAD!")
+    path_url = '/server/directory/file/upload'
+    headers = request.headers
     file_msg = request.get_json(force=True)
+    print(type(file_msg))
     ticket = file_msg['ticket']
     decoded_ticket = AuthenticationLayer.decode(SHARED_SERVER_KEY, bytes(ticket, "utf-8"))
 
@@ -74,11 +97,23 @@ def file_upload():
         print("FILE CREATED -> " + str(file_name, "utf-8") )
 
     else:
-        file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": directory["reference"]})
+        #file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": directory["reference"]})
+        return jsonify({'success': False, 'text': 'File already exists'})   # Does not cater for edit
 
     with open(file["reference"], "wb") as fo:
         fo.write(file_text)         #Store it for flask
+
+
     #### IMPLEMNT REPLICATION
+    if (currentServer()["is_master"]):
+        print("HELLO")
+        thr = threading.Thread(target=replicateUpload, args=(file_msg, headers), kwargs={})
+        thr.start()
+
+    else:
+        headers = request.headers
+        #url = "http://" + server['host']+":" + server['port'] + path_url
+        sendToMaster(file_msg, headers, path_url)
 
     return jsonify({'success': True})
 
@@ -88,6 +123,8 @@ def file_upload():
 
 @application.route('/server/directory/file/download', methods=['POST'])
 def file_download():
+    path_url = '/server/directory/file/download'
+    headers = request.headers
     data = request.get_json(force=True)
     ticket = data['ticket']
     decoded_ticket = AuthenticationLayer.decode(SHARED_SERVER_KEY, bytes(ticket, 'utf-8'))
@@ -114,6 +151,8 @@ def file_download():
 
 @application.route('/server/directory/file/delete', methods=['POST'])
 def file_delete():
+    path_url = '/server/directory/file/delete'
+    headers = request.headers
     data = request.get_json(force=True)
     ticket = data['ticket']
     decoded_ticket = AuthenticationLayer.decode(SHARED_SERVER_KEY, bytes(ticket, 'utf-8'))
@@ -143,17 +182,25 @@ def file_delete():
 
     print("FILE DELETED -> " + str(file_name, "utf-8"))
 
+    '''if (currentServer()["is_master"]):
+        thr = threading.Thread(target=delete_async, args=(file, headers), kwargs={})
+        thr.start()  # will run "foo"
+
+    else:
+        url = "http://" + server['host']+":" + server['post'] + path_url
+        sendToMaster(data, headers, path_url)
+    '''
     return jsonify({'success': True})
 
 
 
 if __name__ == '__main__':
     with application.app_context():
-        print("TEST")
         servers = mongo.db.servers.find()
         for server in servers:
             print(server)
-            if ((server['in_use'] == False) & (server['is_master'] == False)): # Temporary to disable server 8092
+            print("\n")
+            if ((server['in_use'] == False)):#& (server['is_master'] == False)): # Temporary to disable server 8092
                 server['in_use'] = True
                 CURRENT_HOST = server['host']
                 CURRENT_PORT = server['port']

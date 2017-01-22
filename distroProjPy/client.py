@@ -107,10 +107,10 @@ time.sleep(3)
 
 
 ###### SAME FILE DOWNLOAD
-fileDownload = requests.post(url + "/server/directory/file/download", data=json.dumps(payload), headers=headers)
+'''fileDownload = requests.post(url + "/server/directory/file/download", data=json.dumps(payload), headers=headers)
 print(fileDownload.content)
-time.sleep(12)
+time.sleep(3)'''
 
 ###### SAME FILE DELETION
-fileDeletion = requests.post(url + "/server/directory/file/delete", data=json.dumps(payload), headers=headers)
-print(fileDeletion.content)
+'''fileDeletion = requests.post(url + "/server/directory/file/delete", data=json.dumps(payload), headers=headers)
+print(fileDeletion.content)'''
