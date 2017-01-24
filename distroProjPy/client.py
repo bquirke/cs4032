@@ -112,5 +112,5 @@ print(fileDownload.content)
 time.sleep(3)'''
 
 ###### SAME FILE DELETION
-'''fileDeletion = requests.post(url + "/server/directory/file/delete", data=json.dumps(payload), headers=headers)
-print(fileDeletion.content)'''
+fileDeletion = requests.post(url + "/server/directory/file/delete", data=json.dumps(payload), headers=headers)
+print(fileDeletion.content)

@@ -50,7 +50,6 @@ def sendToMaster(data, header, url):
 
 def replicateUpload(data, headers):
     with application.app_context():
-        print("in replicate upload")
         servers = db.servers.find()
         for server in servers:
             if server['is_master'] == False:
@@ -58,8 +57,24 @@ def replicateUpload(data, headers):
                 port = server["port"]
                 if (host == CURRENT_HOST and port == CURRENT_PORT):
                     continue
-                print("POSTING TO " + server['port'])
-                r = requests.post("http://" + host + ":" + port + "/server/directory/file/upload", data=json.dumps(data), headers=headers)
+                print("POSTING UPLOAD REQUEST TO " + server['port'])
+                r = requests.post("http://" + host + ":" + port + "/server/directory/file/upload",
+                                  data=json.dumps(data), headers=headers)
+                print(r.text)
+
+
+def replicateDelete(data, headers):
+    with application.app_context():
+        servers = db.servers.find()
+        for server in servers:
+            if server['is_master'] == False:
+                host = server['host']
+                port = server['port']
+                if (host == CURRENT_HOST and port == CURRENT_PORT):
+                    continue
+                print("POSTING DELETE REQUEST TO " + server['port'])
+                r = requests.post("http://" + host + ":" + port + "/server/directory/file/delete",
+                                  data=json.dumps(data), headers=headers)
                 print(r.text)
 
 
@@ -68,7 +83,6 @@ def replicateUpload(data, headers):
 
 @application.route('/server/directory/file/upload', methods=['POST'])  # HTTP requests posted to this method
 def file_upload():
-    print("IN UPLOAD!")
     path_url = '/server/directory/file/upload'
     headers = request.headers
     file_msg = request.get_json(force=True)
@@ -104,12 +118,10 @@ def file_upload():
         fo.write(file_text)         #Store it for flask
 
 
-    #### IMPLEMNT REPLICATION
-    if (currentServer()["is_master"]):
-        print("HELLO")
+    ####REPLICATION
+    if (server["is_master"]):
         thr = threading.Thread(target=replicateUpload, args=(file_msg, headers), kwargs={})
         thr.start()
-
     else:
         headers = request.headers
         #url = "http://" + server['host']+":" + server['port'] + path_url
@@ -138,11 +150,13 @@ def file_download():
     dir = db.directories.find_one({"name": directory_name, "reference": hex.hexdigest(), "server": server["reference"]})
 
     if not dir:
+        print("NO DIRECTORY FOUND")
         return jsonify({'success': False})
 
     file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]})
 
     if not file:
+        print("NO FILE FOUND")
         return jsonify({'success': False})
 
     print("SENDING FILE -> " + str(file_name, "utf-8"))
@@ -182,14 +196,15 @@ def file_delete():
 
     print("FILE DELETED -> " + str(file_name, "utf-8"))
 
-    '''if (currentServer()["is_master"]):
-        thr = threading.Thread(target=delete_async, args=(file, headers), kwargs={})
-        thr.start()  # will run "foo"
+    if (server["is_master"]):
+        thr = threading.Thread(target=replicateUpload, args=(data, headers), kwargs={})
+        thr.start()
 
     else:
-        url = "http://" + server['host']+":" + server['post'] + path_url
+        headers = request.headers
+        #url = "http://" + server['host']+":" + server['port'] + path_url
         sendToMaster(data, headers, path_url)
-    '''
+
     return jsonify({'success': True})
 
 
@@ -201,6 +216,8 @@ if __name__ == '__main__':
             print(server)
             print("\n")
             if ((server['in_use'] == False)):#& (server['is_master'] == False)): # Temporary to disable server 8092
+                if server['is_master']:
+                    print("\nIS MASTER SERVER\n")
                 server['in_use'] = True
                 CURRENT_HOST = server['host']
                 CURRENT_PORT = server['port']
