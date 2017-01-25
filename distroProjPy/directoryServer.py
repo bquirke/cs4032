@@ -86,14 +86,12 @@ def file_upload():
     path_url = '/server/directory/file/upload'
     headers = request.headers
     file_msg = request.get_json(force=True)
-    print(type(file_msg))
     ticket = file_msg['ticket']
     decoded_ticket = AuthenticationLayer.decode(SHARED_SERVER_KEY, bytes(ticket, "utf-8"))
 
     file_name = AuthenticationLayer.decode(decoded_ticket, bytes(file_msg['file_name'], "utf-8"))
     directory_name = AuthenticationLayer.decode(decoded_ticket, bytes(file_msg['directory_name'], "utf-8"))
     file_text = AuthenticationLayer.decode(decoded_ticket, bytes(file_msg['file_text'], "utf-8"))
-    print(file_text)
 
     hex = hashlib.md5()
     hex.update(directory_name)
@@ -151,13 +149,13 @@ def file_download():
 
     if not dir:
         print("NO DIRECTORY FOUND")
-        return jsonify({'success': False})
+        return jsonify({'success': False, 'message': "NO DIRECTORY FOUND"})
 
     file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]})
 
     if not file:
         print("NO FILE FOUND")
-        return jsonify({'success': False})
+        return jsonify({'success': False, 'message': "NO FILE FOUND"})
 
     print("SENDING FILE -> " + str(file_name, "utf-8"))
     return flask.send_file(file["reference"])
@@ -181,14 +179,14 @@ def file_delete():
     dir = db.directories.find_one({"name": directory_name, "reference": hex.hexdigest(), "server": server["reference"]})
 
     if not dir:
-        return jsonify({'success': False})
+        return jsonify({'success': False, 'message': "NO DIRECTORY OF THAT NAME FOUND"})
 
     file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]})
 
     if not file:
-        return jsonify({'success': False})
+        return jsonify({'success': False, 'message': "NO FILE OF THAT NAME FOUND"})
 
-    os.remove(file["reference"])
+    #os.remove(file["reference"])
 
     delete_file = db.files.delete_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]})
     if not delete_file.deleted_count >= 0:
@@ -196,13 +194,16 @@ def file_delete():
 
     print("FILE DELETED -> " + str(file_name, "utf-8"))
 
+    # Send the file to the master server to be broadcast from there
     if (server["is_master"]):
-        thr = threading.Thread(target=replicateUpload, args=(data, headers), kwargs={})
+        thr = threading.Thread(target=replicateDelete, args=(data, headers), kwargs={})
         thr.start()
 
     else:
+        # We are the master server so call our replicate function
         headers = request.headers
         #url = "http://" + server['host']+":" + server['port'] + path_url
+        print("SENDING MASTER URL PATH -> " + path_url)
         sendToMaster(data, headers, path_url)
 
     return jsonify({'success': True})

@@ -103,13 +103,13 @@ payload = {"directory_name" : enc_directory,"file_name": enc_file_name, "file_te
 url = "http://" + server_host+":" + server_port
 fileUpload = requests.post(url + "/server/directory/file/upload", data=json.dumps(payload), headers=headers)
 print(fileUpload)
-time.sleep(3)
+time.sleep(5)
 
 
 ###### SAME FILE DOWNLOAD
-'''fileDownload = requests.post(url + "/server/directory/file/download", data=json.dumps(payload), headers=headers)
+fileDownload = requests.post(url + "/server/directory/file/download", data=json.dumps(payload), headers=headers)
 print(fileDownload.content)
-time.sleep(3)'''
+#time.sleep(3)
 
 ###### SAME FILE DELETION
 fileDeletion = requests.post(url + "/server/directory/file/delete", data=json.dumps(payload), headers=headers)
