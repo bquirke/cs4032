@@ -38,6 +38,7 @@ db = openConnection.authenServer
 CURRENT_HOST = None
 CURRENT_PORT = None
 
+
 def currentServer():
     servers = db.servers.find()
     for server in servers:
@@ -112,7 +113,12 @@ def file_upload():
         #file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": directory["reference"]})
         return jsonify({'success': False, 'text': 'File already exists'})   # Does not cater for edit
 
-    with open(file["reference"], "wb") as fo:
+    # Writing to disk
+    path = server['reference']
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    with open(os.path.join(path, file['reference']), 'wb') as fo:
         fo.write(file_text)         #Store it for flask
 
 
@@ -158,7 +164,8 @@ def file_download():
         return jsonify({'success': False, 'message': "NO FILE FOUND"})
 
     print("SENDING FILE -> " + str(file_name, "utf-8"))
-    return flask.send_file(file["reference"])
+    path = server['reference']
+    return flask.send_file(os.path.join(path, file['reference']))
 
 
 @application.route('/server/directory/file/delete', methods=['POST'])
@@ -186,7 +193,8 @@ def file_delete():
     if not file:
         return jsonify({'success': False, 'message': "NO FILE OF THAT NAME FOUND"})
 
-    #os.remove(file["reference"])
+    path = server['reference']
+    os.remove(os.path.join(path, file['reference']))
 
     delete_file = db.files.delete_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]})
     if not delete_file.deleted_count >= 0:
@@ -205,6 +213,7 @@ def file_delete():
         #url = "http://" + server['host']+":" + server['port'] + path_url
         print("SENDING MASTER URL PATH -> " + path_url)
         sendToMaster(data, headers, path_url)
+
 
     return jsonify({'success': True})
 

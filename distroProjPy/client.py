@@ -14,6 +14,8 @@ from flask import Response
 from flask_pymongo import PyMongo
 from pymongo import MongoClient
 
+from cacheService import Cache
+
 from Crypto.Cipher import AES
 from Crypto import Random
 
@@ -22,6 +24,8 @@ from Crypto import Random
 keyDerivedFromPassword = '0123456789abcdef0123456789abcdef'
 unencrypted_password = 'youWillNeverGues'
 file_name = 'test_file_name.txt'
+
+
 
 
 def pad(s):
@@ -108,9 +112,24 @@ time.sleep(5)
 
 ###### SAME FILE DOWNLOAD
 fileDownload = requests.post(url + "/server/directory/file/download", data=json.dumps(payload), headers=headers)
-print(fileDownload.content)
-#time.sleep(3)
+print("recieved file from server -> " + fileDownload.text)
+
+
+cache = Cache()
+cache.create_cache()
+cache.cache_obj(file_name, fileDownload.text)
+
+if cache.check_cache(file_name):
+    cachedFile = cache.get_cached(file_name)
+    print("CACHED VERSION OF FILE ->" + cachedFile)
+
+else:
+    payload = {"directory_name": enc_directory, "file_name": enc_file_name, "file_text": enc_text, "ticket": ticket}
+    url = "http://" + server_host + ":" + server_port
+    fileUpload = requests.post(url + "/server/directory/file/upload", data=json.dumps(payload), headers=headers)
+
+time.sleep(3)
 
 ###### SAME FILE DELETION
 fileDeletion = requests.post(url + "/server/directory/file/delete", data=json.dumps(payload), headers=headers)
-print(fileDeletion.content)
+#print(fileDeletion.content)
