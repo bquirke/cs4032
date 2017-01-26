@@ -1,24 +1,17 @@
-import base64
-import datetime
 import json
 import hashlib
 import os
 import threading
 import requests
-import random
-import string
+
 
 import flask
-from flask import Flask
 from flask import request
 from flask import jsonify
-from flask import Response
-from flask_pymongo import PyMongo
+
 from pymongo import MongoClient
-from Crypto.Cipher import AES
 from serverSetup import File
 from serverSetup import Directory
-from serverSetup import Server
 from serverSetup import AuthenticationLayer
 
 from authenServer import application    # Not sure how feasible this is
