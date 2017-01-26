@@ -25,3 +25,4 @@ python3 directoryServer.py
 python3 client.py
 ```
 
+#####For Cach implemntation a redis server needs to be running on port 6379(default)
