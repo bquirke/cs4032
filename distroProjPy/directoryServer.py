@@ -8,18 +8,21 @@ import requests
 import flask
 from flask import request
 from flask import jsonify
+from flask import Flask
 
 from pymongo import MongoClient
+from flask_pymongo import PyMongo
+
 from serverSetup import File
 from serverSetup import Directory
 from serverSetup import AuthenticationLayer
 
-from authenServer import application    # Not sure how feasible this is
-from authenServer import mongo
+#from authenServer import application    # Not sure how feasible this is
+#from authenServer import mongo
 SHARED_SERVER_KEY = 'fedcba0123456789abcdef9876543210'
 
-#application = Flask(__name__)
-#mongo = PyMongo(application)
+application = Flask(__name__)
+mongo = PyMongo(application)
 
 mongo_server = "127.0.0.1"
 mongo_port = "27017"
@@ -214,7 +217,7 @@ def file_delete():
 
 if __name__ == '__main__':
     with application.app_context():
-        servers = mongo.db.servers.find()
+        servers = db.servers.find()
         for server in servers:
             print(server)
             print("\n")

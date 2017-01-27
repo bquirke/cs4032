@@ -126,7 +126,7 @@ if cache.check_cache(file_name):
 else:
     payload = {"directory_name": enc_directory, "file_name": enc_file_name, "file_text": enc_text, "ticket": ticket}
     url = "http://" + server_host + ":" + server_port
-    fileUpload = requests.post(url + "/server/directory/file/upload", data=json.dumps(payload), headers=headers)
+    fileUpload = requests.post(url + "/server/directory/file/download", data=json.dumps(payload), headers=headers)
 
 time.sleep(3)
 

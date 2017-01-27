@@ -25,13 +25,14 @@ mongo = PyMongo(application)
 # Setting up the database conn
 
 #REDUNDANT
+'''
 db_server = "localhost"
 db_port = "27017"
 connect_string = "mongodb://" + db_server + ":" + db_port
 
 openConnection = MongoClient(connect_string)
 db = openConnection.authenServer
-clients = db.clients
+clients = db.clients'''
 '''db.clients.drop()
 db.servers.drop()
 db.publicKeys.drop()
@@ -49,6 +50,7 @@ def test():
 @application.route('/createClient', methods=['POST'])  # Security needs to be looked at
 def createClient():
     with application.app_context():
+        db = mongo.db
         client_data = request.get_json(force=True)
         client_id = client_data.get('client_id')
         public_key = AuthenticationLayer.getPublicKey(client_id)
@@ -68,11 +70,13 @@ def createClient():
                 "server_port": "0000"}  # Needs to be randomly generated
 
         dbInsert = db.clients.insert_one(data).inserted_id
+        print(dbInsert)
         return jsonify({'success': True})
 
 
 @application.route('/authClient', methods=['POST'])
 def authenticateClient():
+    db = mongo.db.authenServer
     client_data = request.get_json(force=True)
     client_id = client_data.get('client_id')
     client_pw = client_data.get('password')

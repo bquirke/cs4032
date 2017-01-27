@@ -8,10 +8,18 @@ from flask import Flask
 from flask import request
 from flask import jsonify
 from flask_pymongo import PyMongo
+from pymongo import MongoClient
 from Crypto.Cipher import AES
 
 application = Flask(__name__)
 mongo = PyMongo(application)
+
+mongo_server = "127.0.0.1"
+mongo_port = "27017"
+connect_string = "mongodb://" + mongo_server + ":" + mongo_port
+
+openConnection = MongoClient(connect_string)
+db = openConnection.authenServer
 
 
 ###########################################
@@ -20,15 +28,14 @@ class Server:
         pass
 
     def get_servers():
-        return mongo.db.servers.find()
+        return db.servers.find()
 
     def create(host, port):
-        db = mongo.db
+
         insert = db.servers.insert_one({"host": host, "port": port})
         return insert
 
     def find_server(host, port):
-        db = mongo.db
         return db.servers.find({"host": host, "port": port})
 
 
@@ -52,15 +59,15 @@ class AuthenticationLayer():
         return decoded_data.strip()  ### NEED TO TEST
 
     def get_client(client_id):
-        db = mongo.db
+
         return db.clients.find_one({"client_id": client_id})
 
     def update_client(client_id, data):
-        db = mongo.db
+
         return db.clients.update({"client_id": client_id}, data, upsert=True)
 
     def getPublicKey(client_id):
-        db = mongo.db
+
         key = db.publicKeys.find_one({"client_id": "4"})
         if key:
             return key['public_key']
@@ -69,6 +76,7 @@ class AuthenticationLayer():
     def user_auth(client_id, encrypted_pw):
         client_data = AuthenticationLayer.get_client(client_id)
         byte_enc_pw = bytes(encrypted_pw, 'utf-8')
+        print(client_data['public_key'])
         publicKey = client_data['public_key']
         decoded_password = AuthenticationLayer.decode(publicKey, byte_enc_pw)
         str_decoded_password = str(decoded_password, 'utf-8')
@@ -99,7 +107,7 @@ class File:
         pass
 
     def create(name, directory_name, directory_reference, server_reference, file_text):
-        db = mongo.db
+
         hex = hashlib.md5()
         print(type(directory_name))
         print(type(directory_reference))
@@ -120,7 +128,7 @@ class Directory:
         pass
 
     def create(name, server):
-        db = mongo.db
+
         hex = hashlib.md5()
         hex.update(name)
         db.directories.insert({"name": name
@@ -130,7 +138,7 @@ class Directory:
         return directory
 
     def isDirectories(name, reference, server_ref):
-        db = mongo.db
+
         try:
             if db.directories.find_one({"name": name, "reference": reference, "server": server_ref}):
                 return True

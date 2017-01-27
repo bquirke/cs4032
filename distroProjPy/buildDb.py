@@ -91,7 +91,8 @@ db.servers.insert(server_list)
 
 
 keys_list = [{"public_key": '0123456789abcdef0123456789abcdef', "client_id": '4'},
-             {"public_key": 'fedcba0123456789abcdef9876543210', "client_id": '2'}]
+             {"public_key": 'fedcba0123456789abcdef9876543210', "client_id": '2'},
+             {"public_key": 'test', "client_id": '100'}]
 
 db.publicKeys.insert(keys_list)
 ################################################
