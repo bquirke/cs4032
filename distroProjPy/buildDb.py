@@ -93,7 +93,7 @@ db.directories.insert(dir_list)
     , "reference": made from directory name
     , "server": server}'''
 
-file_list = [{"name": 'test_file'}]
+file_list = [{"name": 'test_file', "write_lock": False, 'write_lock_expires': 0000}]
 db.files.insert(file_list)
 
 ''' File db setup

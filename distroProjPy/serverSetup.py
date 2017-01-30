@@ -113,13 +113,18 @@ class File:
         print(type(directory_reference))
         hex.update(bytes(directory_reference + "/", "utf-8") + directory_name)
         db.files.insert({"name": name, "directory": directory_reference
-                            , "server": server_reference
-                            , "reference": hex.hexdigest()
-                            , "updated_at": datetime.datetime.utcnow()
-                            , "file_text": file_text
+                         , "server": server_reference
+                         , "reference": hex.hexdigest()
+                         , "updated_at": datetime.datetime.utcnow()
+                         , "file_text": file_text
+                         , "write_lock": False,
+                         'write_lock_expires': 0000
                          })
         file = db.files.find_one({"reference": hex.hexdigest()})
         return file
+
+    def update_file(file_name, directory_name, data):
+        return db.clients.update({"name": file_name, "directory": directory_name}, data, upsert=True)
 
 
 #####################################################

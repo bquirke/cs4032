@@ -96,9 +96,7 @@ filePath = os.path.join(fileDir, 'client_files/' + file_name)
 f = open(filePath)  # open a file
 text = f.read()    # read the entire contents, should be UTF-8 text
 
-#details = json.dumps({"directory_name": "/test", "file_name": 'test_file_name.txt', "file_text": text})
-#encoded = pad(str(encode(session_key,details)))
-#print(len(encoded))
+
 enc_directory = str(encode(session_key, "/test"), "utf-8")
 enc_file_name = str(encode(session_key, 'test_file_name.txt'), "utf-8")
 enc_text = str(encode(session_key, text), "utf-8")
@@ -111,6 +109,7 @@ time.sleep(5)
 
 
 ###### SAME FILE DOWNLOAD
+payload = {"directory_name" : enc_directory,"file_name": enc_file_name,"ticket": ticket}
 fileDownload = requests.post(url + "/server/directory/file/download", data=json.dumps(payload), headers=headers)
 print("recieved file from server -> " + fileDownload.text)
 
@@ -124,7 +123,7 @@ if cache.check_cache(file_name):
     print("CACHED VERSION OF FILE ->" + cachedFile)
 
 else:
-    payload = {"directory_name": enc_directory, "file_name": enc_file_name, "file_text": enc_text, "ticket": ticket}
+    payload = {"directory_name": enc_directory, "file_name": enc_file_name, "ticket": ticket}
     url = "http://" + server_host + ":" + server_port
     fileUpload = requests.post(url + "/server/directory/file/download", data=json.dumps(payload), headers=headers)
 
