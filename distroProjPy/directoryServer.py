@@ -16,6 +16,7 @@ from flask_pymongo import PyMongo
 from serverSetup import File
 from serverSetup import Directory
 from serverSetup import AuthenticationLayer
+from lockService import Lock
 
 #from authenServer import application    # Not sure how feasible this is
 #from authenServer import mongo
@@ -41,6 +42,9 @@ def currentServer():
         if ((server['host'] == CURRENT_HOST) & (server['port'] == CURRENT_PORT)):
             return server
 
+''' REPLICATION IMLEMENTATION
+
+'''
 def sendToMaster(data, header, url):
     r = requests.post("http://127.0.0.1:8092" + url, data=json.dumps(data), headers=header)
     print("MASTER SERVER REPLIED " + r.text)
@@ -76,7 +80,9 @@ def replicateDelete(data, headers):
 
 
 
+''' DFS STANDARD INFASTRUCTURE
 
+'''
 
 @application.route('/server/directory/file/upload', methods=['POST'])  # HTTP requests posted to this method
 def file_upload():
