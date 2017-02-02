@@ -144,7 +144,7 @@ def retrieve_file(file_name, directory_name):
     return flask.send_file(os.path.join(path, file['reference']))
 
 
-''' DFS STANDARD INFASTRUCTURE
+''' DFS STANDARD INFRASTRUCTURE
 
 '''
 @application.route('/server/directory/file/lockFile', methods=['POST'])
