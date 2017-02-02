@@ -23,6 +23,7 @@ RUN python get-pip.py && \
 
 COPY directoryServer.py /src/directoryServer.py
 COPY serverSetup.py /src/serverSetup.py
+COPY buildDirDb.py /src/buildDirDb.py
 
-
+CMD ["python","/src/buildDirDb.py"]
 CMD ["python","/src/directoryServer.py"]

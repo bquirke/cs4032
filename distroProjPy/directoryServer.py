@@ -78,6 +78,41 @@ def replicateDelete(data, headers):
                                   data=json.dumps(data), headers=headers)
                 print(r.text)
 
+def replicateEdit(data, headers):
+    with application.app_context():
+        servers = db.servers.find()
+        for server in servers:
+            if server['is_master'] == False:
+                host = server['host']
+                port = server['port']
+                if (host == CURRENT_HOST and port == CURRENT_PORT):
+                    continue
+                print("POSTING EDIT REQUEST TO " + server['port'])
+                r = requests.post("http://" + host + ":" + port + "/server/directory/file/edit",
+                                  data=json.dumps(data), headers=headers)
+                print(r.text)
+
+
+def retrieve_file(file_name, directory_name):
+    hex = hashlib.md5()
+    hex.update(directory_name)
+    server = currentServer()
+
+    dir = db.directories.find_one({"name": directory_name, "reference": hex.hexdigest(), "server": server["reference"]})
+
+    if not dir:
+        print("NO DIRECTORY FOUND")
+        return jsonify({'success': False, 'message': "NO DIRECTORY FOUND"})
+
+    file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]})
+
+    if not file:
+        print("NO FILE FOUND")
+        return jsonify({'success': False, 'message': "NO FILE FOUND"})
+
+    print("SENDING FILE -> " + str(file_name, "utf-8"))
+    path = server['reference']
+    return flask.send_file(os.path.join(path, file['reference']))
 
 
 ''' DFS STANDARD INFASTRUCTURE
@@ -115,6 +150,7 @@ def file_upload():
         #file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": directory["reference"]})
         return jsonify({'success': False, 'text': 'File already exists'})   # Does not cater for edit
 
+
     # Writing to disk
     path = server['reference']
     if not os.path.exists(path):
@@ -137,8 +173,6 @@ def file_upload():
 
 
 
-
-
 @application.route('/server/directory/file/download', methods=['POST'])
 def file_download():
     path_url = '/server/directory/file/download'
@@ -149,26 +183,28 @@ def file_download():
 
     file_name = AuthenticationLayer.decode(decoded_ticket, bytes(data['file_name'], "utf-8"))
     directory_name = AuthenticationLayer.decode(decoded_ticket, bytes(data['directory_name'], "utf-8"))
-
-    hex = hashlib.md5()
-    hex.update(directory_name)
     server = currentServer()
-    dir = db.directories.find_one({"name": directory_name, "reference": hex.hexdigest(), "server": server["reference"]})
 
-    if not dir:
-        print("NO DIRECTORY FOUND")
-        return jsonify({'success': False, 'message': "NO DIRECTORY FOUND"})
+    if data['aqquire-wite_lock'] == True:
+        locking = Lock.write_lock_aqquire(file_name, directory_name, decoded_ticket, server)
 
-    file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]})
+        if locking['success'] == True:
+            return retrieve_file(file_name, directory_name) #Obtained write lock
 
-    if not file:
-        print("NO FILE FOUND")
-        return jsonify({'success': False, 'message': "NO FILE FOUND"})
+        else:
+            return jsonify(locking)  # Error
 
-    print("SENDING FILE -> " + str(file_name, "utf-8"))
-    path = server['reference']
-    return flask.send_file(os.path.join(path, file['reference']))
+    else:   # Do not want write_lock (read lock) but must check write lock
+        locking = Lock.check_write_lock(file_name,directory_name, server, decoded_ticket)
 
+        if locking['success'] == True: # File is locked
+            return jsonify(locking)
+
+        elif (locking['success'] == False) and (locking['text'] == 'None type returned'): # Retrieval error
+            return jsonify(locking)
+
+        elif locking['success'] == False: # File is unlocked
+            return retrieve_file(file_name,directory_name)
 
 @application.route('/server/directory/file/delete', methods=['POST'])
 def file_delete():
@@ -218,6 +254,65 @@ def file_delete():
 
 
     return jsonify({'success': True})
+
+
+@application.route('/server/directory/file/edit', methods=['POST'])  # HTTP requests posted to this method
+def file_edit():
+    path_url = '/server/directory/file/edit'
+    headers = request.headers
+    file_msg = request.get_json(force=True)
+    ticket = file_msg['ticket']
+    decoded_ticket = AuthenticationLayer.decode(SHARED_SERVER_KEY, bytes(ticket, "utf-8"))
+
+    file_name = AuthenticationLayer.decode(decoded_ticket, bytes(file_msg['file_name'], "utf-8"))
+    directory_name = AuthenticationLayer.decode(decoded_ticket, bytes(file_msg['directory_name'], "utf-8"))
+    file_text = AuthenticationLayer.decode(decoded_ticket, bytes(file_msg['file_text'], "utf-8"))
+
+    hex = hashlib.md5()
+    hex.update(directory_name)
+    server = currentServer()
+
+    dir = db.directories.find_one({"name": directory_name, "reference": hex.hexdigest(), "server": server["reference"]})
+
+    if not dir:
+        print("NO DIRECTORY FOUND")
+        return jsonify({'success': False, 'message': "NO DIRECTORY FOUND"})
+
+    file = db.files.find_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]})
+
+    if not file:
+        print("NO FILE FOUND")
+        return jsonify({'success': False, 'message': "NO FILE FOUND"})
+    ########################################################################################
+
+    file_lock = db.files.find_one({"name": file_name, "server": server["reference"], "directory": dir["reference"]
+                                   ,'lock_user_key': decoded_ticket})
+    if not file_lock:
+        print("CLIENT DOES NOT OWN LOCK ON THIS FILE")
+        return jsonify({'success': False, 'message': "YOU DO NOT HAVE LOCK FOR THIS FILE"})
+
+    file['file_text'] = file_text
+    file_status = File.update_file(file_name,dir, server, decoded_ticket, file) #Overwrite
+
+
+    # Writing to disk
+    path = server['reference']
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    with open(os.path.join(path, file['reference']), 'wb') as fo:
+        fo.write(file_text)  # Store it for flask
+
+    ####REPLICATION
+    if (server["is_master"]):
+        thr = threading.Thread(target=replicateEdit, args=(file_msg, headers), kwargs={})
+        thr.start()
+    else:
+        headers = request.headers
+        # url = "http://" + server['host']+":" + server['port'] + path_url
+        sendToMaster(file_msg, headers, path_url)
+
+    return jsonify({'success': True, 'text': "File edited and saved"})
 
 
 

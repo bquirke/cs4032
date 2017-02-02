@@ -117,14 +117,15 @@ class File:
                          , "reference": hex.hexdigest()
                          , "updated_at": datetime.datetime.utcnow()
                          , "file_text": file_text
-                         , "write_lock": False,
-                         'write_lock_expires': 0000
+                         , "write_lock": False
+                         ,'write_lock_expires': 0000
+                         ,'lock_user_key': 0000
                          })
         file = db.files.find_one({"reference": hex.hexdigest()})
         return file
 
-    def update_file(file_name, directory_name, data):
-        return db.clients.update({"name": file_name, "directory": directory_name}, data, upsert=True)
+    def update_file(file_name, dir, server, session_key, data):
+        return db.files.update({"name": file_name, "server": server["reference"], "directory": dir["reference"]}, data, upsert=True)
 
 
 #####################################################

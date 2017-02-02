@@ -16,9 +16,13 @@ RUN python get-pip.py && \
 
     yum install -y openssl-devel && \
 
-    pip install pycrypto
+    pip install pycrypto && \
+
+    pip install requests
 
 COPY authenServer.py /src/authenServer.py
 COPY serverSetup.py /src/serverSetup.py
+COPY buildDb.py /src/buildDb.py
 
+CMD ["python","/src/buildDb.py"]
 CMD ["python","/src/authenServer.py"]
