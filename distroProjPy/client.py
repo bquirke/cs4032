@@ -183,6 +183,8 @@ payload = {"directory_name" : enc_directory2,"file_name": enc_file_name2,"ticket
 url2 = "http://" + client2['server_host']+":" + client2['server_port']
 fileDownload = requests.post(url2 + "/server/directory/file/download", data=json.dumps(payload), headers=headers)
 print("Client 2 told -> " + fileDownload.text)
+time.sleep(2)
+
 
 ## Client 1 to upload edited file
 fileDir = os.path.dirname(os.path.realpath('__file__'))
@@ -192,11 +194,19 @@ text = f.read()    # read the entire contents, should be UTF-8 text
 enc_text = str(encode(client1['session_key'], text), "utf-8")
 
 
-payload = {"directory_name" : enc_directory,"file_name": enc_file_name, "file_text": enc_text, "ticket": client1['ticket']}
+payload = {"directory_name" : enc_directory,"file_name": enc_file_name, "file_text": enc_text, "ticket": client1['ticket']
+           ,'count':0}
 fileEditUpload = requests.post(url + "/server/directory/file/edit", data=json.dumps(payload), headers=headers)
 print("Client 1 told after edit -> " + fileEditUpload.text)
 
 payload = {"directory_name" : enc_directory,"file_name": enc_file_name,"ticket": client1['ticket'], 'aqquire-wite_lock': False}
 fileDownload = requests.post(url + "/server/directory/file/download", data=json.dumps(payload), headers=headers)
+print("Client 1 recieved file from server -> " + fileDownload.text)
+time.sleep(2)
+
+print("Client 1 will attempt to give up its lock")
+time.sleep(1)
+payload = {"directory_name" : enc_directory,"file_name": enc_file_name,"ticket": client1['ticket'], 'count': 0}
+fileDownload = requests.post(url + "/server/directory/file/unlockFile", data=json.dumps(payload), headers=headers)
 print("Client 1 recieved file from server -> " + fileDownload.text)
 

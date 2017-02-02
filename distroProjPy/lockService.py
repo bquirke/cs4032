@@ -128,8 +128,8 @@ class Lock:
         if file_data:
             if file_data["write_lock"] == True:
                 file_data["write_lock"] = False
-                if (File.update_file(file_name, directory_name, file_data)):
-                    result = {"success": True, 'text': file_data}    # FILE UNLOCKED
+                if (File.update_file(file_name, dir, server, session_key, file_data)):
+                    result = {"success": True, 'text': "File unlocked"}    # FILE UNLOCKED
                     return result
                 else:
                     result = {"success": False, 'text': "ERROR when updating file lock"}

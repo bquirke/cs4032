@@ -92,6 +92,35 @@ def replicateEdit(data, headers):
                                   data=json.dumps(data), headers=headers)
                 print(r.text)
 
+def replicateLockFile(data, headers):
+    with application.app_context():
+        servers = db.servers.find()
+        for server in servers:
+            #if server['is_master'] == False: REMOVED AS REPLICATING FROM WORKER SERVER FOR NOW
+            host = server['host']
+            port = server['port']
+            if (host == CURRENT_HOST and port == CURRENT_PORT):
+                continue
+            print("POSTING LOCK FILE REQUEST TO " + server['port'])
+            r = requests.post("http://" + host + ":" + port + "/server/directory/file/lockFile",
+                              data=json.dumps(data), headers=headers)
+            print(r.text)
+
+
+def replicateUnlock(data, headers):
+    with application.app_context():
+        servers = db.servers.find()
+        for server in servers:
+            #if server['is_master'] == False: REMOVED AS REPLICATING FROM WORKER SERVER FOR NOW
+            host = server['host']
+            port = server['port']
+            if (host == CURRENT_HOST and port == CURRENT_PORT):
+                continue
+            print("POSTING LOCK FILE REQUEST TO " + server['port'])
+            r = requests.post("http://" + host + ":" + port + "/server/directory/file/unlockFile",
+                              data=json.dumps(data), headers=headers)
+            print(r.text)
+
 
 def retrieve_file(file_name, directory_name):
     hex = hashlib.md5()
@@ -118,6 +147,61 @@ def retrieve_file(file_name, directory_name):
 ''' DFS STANDARD INFASTRUCTURE
 
 '''
+@application.route('/server/directory/file/lockFile', methods=['POST'])
+def lock_file():
+    headers = request.headers
+    data = request.get_json(force=True)
+    ticket = data['ticket']
+    decoded_ticket = AuthenticationLayer.decode(SHARED_SERVER_KEY, bytes(ticket, 'utf-8'))
+
+    file_name = AuthenticationLayer.decode(decoded_ticket, bytes(data['file_name'], "utf-8"))
+    directory_name = AuthenticationLayer.decode(decoded_ticket, bytes(data['directory_name'], "utf-8"))
+    server = currentServer()
+
+    if data['aqquire-wite_lock'] == True:
+        locking = Lock.write_lock_aqquire(file_name, directory_name, decoded_ticket, server)
+
+        if locking['success'] == True:
+            # Propagate write_lock to other services
+            return retrieve_file(file_name, directory_name) #Obtained write lock
+
+        else:
+            return jsonify(locking)  # Error
+
+@application.route('/server/directory/file/unlockFile', methods=['POST'])
+def unlock_file():
+    path_url = '/server/directory/file/unlockFile'
+    headers = request.headers
+    data = request.get_json(force=True)
+    ticket = data['ticket']
+    decoded_ticket = AuthenticationLayer.decode(SHARED_SERVER_KEY, bytes(ticket, 'utf-8'))
+
+    file_name = AuthenticationLayer.decode(decoded_ticket, bytes(data['file_name'], "utf-8"))
+    directory_name = AuthenticationLayer.decode(decoded_ticket, bytes(data['directory_name'], "utf-8"))
+    server = currentServer()
+    count = data['count']
+
+    unlock_file = Lock.unlock(file_name,directory_name, decoded_ticket, server)
+
+    if unlock_file["success"] == True:  #file unlocked
+        ####REPLICATION
+        if (server["is_master"]):
+            thr = threading.Thread(target=replicateUnlock, args=(data, headers), kwargs={})
+            thr.start()
+
+        elif count == 0:  # Count is to stop recursively calling the replication of transaction
+            count += 1
+            data['count'] = count
+            headers = request.headers
+            # url = "http://" + server['host']+":" + server['port'] + path_url
+            sendToMaster(data, headers, path_url)
+
+        return jsonify(unlock_file)
+
+    else:
+        return jsonify(unlock_file)
+
+
 
 @application.route('/server/directory/file/upload', methods=['POST'])  # HTTP requests posted to this method
 def file_upload():
@@ -189,6 +273,8 @@ def file_download():
         locking = Lock.write_lock_aqquire(file_name, directory_name, decoded_ticket, server)
 
         if locking['success'] == True:
+            # Propagate write_lock to other services
+            replicateLockFile(data,headers) # Non threaded for the moment
             return retrieve_file(file_name, directory_name) #Obtained write lock
 
         else:
@@ -267,6 +353,7 @@ def file_edit():
     file_name = AuthenticationLayer.decode(decoded_ticket, bytes(file_msg['file_name'], "utf-8"))
     directory_name = AuthenticationLayer.decode(decoded_ticket, bytes(file_msg['directory_name'], "utf-8"))
     file_text = AuthenticationLayer.decode(decoded_ticket, bytes(file_msg['file_text'], "utf-8"))
+    count = file_msg['count']
 
     hex = hashlib.md5()
     hex.update(directory_name)
@@ -307,7 +394,10 @@ def file_edit():
     if (server["is_master"]):
         thr = threading.Thread(target=replicateEdit, args=(file_msg, headers), kwargs={})
         thr.start()
-    else:
+
+    elif count == 0:    # Count is to stop recursively calling the replication of transaction
+        count += 1
+        file_msg['count'] = count
         headers = request.headers
         # url = "http://" + server['host']+":" + server['port'] + path_url
         sendToMaster(file_msg, headers, path_url)
